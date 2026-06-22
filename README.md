@@ -55,3 +55,34 @@ Iremos marcar uma entrevista para Apresentação do Desafio.
 
 O desafio foi implementado em uma aplicação utiliza separação de responsabilidades inspirada em arquitetura hexagonal.
 
+## Desenho da Solução
+
+```mermaid
+flowchart LR
+    CLIENT[Cliente / Postman / cURL]
+
+    subgraph API[CEP Query Service]
+        CONTROLLER[CepController]
+        USECASE[ConsultarCepService]
+        PROVIDER_PORT[CepProvider]
+        REPOSITORY_PORT[ConsultaRepository]
+        HTTP_ADAPTER[OpenCepClient]
+        DB_ADAPTER[ConsultaRepositoryAdapter]
+    end
+
+    WIREMOCK[WireMock]
+    POSTGRES[(PostgreSQL)]
+
+    CLIENT -->|GET /api/v1/ceps/CEP| CONTROLLER
+    CONTROLLER --> USECASE
+    USECASE --> PROVIDER_PORT
+    PROVIDER_PORT --> HTTP_ADAPTER
+    HTTP_ADAPTER -->|GET /v1/CEP| WIREMOCK
+
+    USECASE --> REPOSITORY_PORT
+    REPOSITORY_PORT --> DB_ADAPTER
+    DB_ADAPTER --> POSTGRES
+
+    USECASE --> CONTROLLER
+    CONTROLLER --> CLIENT
+```
