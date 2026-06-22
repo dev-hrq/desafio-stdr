@@ -3,6 +3,7 @@ package com.santander.desafio.infrastructure.output.http;
 import com.santander.desafio.application.port.output.CepProvider;
 import com.santander.desafio.domain.exception.CepNaoEncontradoException;
 import com.santander.desafio.domain.exception.IntegracaoCepException;
+import com.santander.desafio.domain.exception.TimeoutCepException;
 import com.santander.desafio.domain.model.Endereco;
 import com.santander.desafio.infrastructure.output.http.dto.OpenCepResponse;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -11,6 +12,9 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientResponseException;
+
+import java.net.SocketTimeoutException;
+import java.net.http.HttpTimeoutException;
 
 @Component
 public class OpenCepClient implements CepProvider {
@@ -67,10 +71,22 @@ public class OpenCepClient implements CepProvider {
 
             return response.toDomain();
 
-        } catch (CepNaoEncontradoException | IntegracaoCepException exception) {
+        } catch (CepNaoEncontradoException exception) {
+            throw exception;
+
+        } catch (IntegracaoCepException exception) {
+
             throw exception;
 
         } catch (ResourceAccessException exception) {
+            if (causaEhTimeout(exception)) {
+                throw new TimeoutCepException(
+                        cep,
+                        "O tempo limite para consultar o provedor de CEP foi excedido.",
+                        exception
+                );
+            }
+
             throw new IntegracaoCepException(
                     cep,
                     "Não foi possível acessar o provedor de CEP.",
@@ -84,6 +100,28 @@ public class OpenCepClient implements CepProvider {
                     "Erro HTTP ao consultar o provedor de CEP.",
                     exception
             );
+
+        } catch (Exception exception) {
+            throw new IntegracaoCepException(
+                    cep,
+                    "Ocorreu um erro inesperado ao consultar o provedor de CEP.",
+                    exception
+            );
         }
+    }
+
+    private boolean causaEhTimeout(Throwable exception) {
+        Throwable causaAtual = exception;
+
+        while (causaAtual != null) {
+            if (causaAtual instanceof SocketTimeoutException
+                    || causaAtual instanceof HttpTimeoutException) {
+                return true;
+            }
+
+            causaAtual = causaAtual.getCause();
+        }
+
+        return false;
     }
 }

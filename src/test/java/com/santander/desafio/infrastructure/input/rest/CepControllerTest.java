@@ -4,6 +4,7 @@ import com.santander.desafio.application.port.input.ConsultarCepUseCase;
 import com.santander.desafio.domain.exception.CepInvalidoException;
 import com.santander.desafio.domain.exception.CepNaoEncontradoException;
 import com.santander.desafio.domain.exception.IntegracaoCepException;
+import com.santander.desafio.domain.exception.TimeoutCepException;
 import com.santander.desafio.domain.model.Endereco;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -13,6 +14,7 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -146,5 +148,49 @@ class CepControllerTest {
                 "Sudeste",
                 "3549805"
         );
+    }
+
+    @Test
+    void deveRetornarGatewayTimeoutQuandoProvedorExcederTempoLimite()
+            throws Exception {
+
+        when(consultarCepUseCase.consultar("88888888"))
+                .thenThrow(
+                        new TimeoutCepException(
+                                "88888888",
+                                "O tempo limite para consultar o provedor de CEP foi excedido."
+                        )
+                );
+
+        mockMvc.perform(
+                        get("/api/v1/ceps/88888888")
+                )
+                .andExpect(status().isGatewayTimeout())
+                .andExpect(jsonPath("$.status").value(504))
+                .andExpect(jsonPath("$.error")
+                        .value("Gateway Timeout"))
+                .andExpect(jsonPath("$.code")
+                        .value("TIMEOUT_PROVEDOR_CEP"))
+                .andExpect(jsonPath("$.message")
+                        .value(
+                                "O tempo limite para consultar o provedor de CEP foi excedido."
+                        ))
+                .andExpect(jsonPath("$.path")
+                        .value("/api/v1/ceps/88888888"));
+    }
+
+    @Test
+    void deveRetornarMethodNotAllowedQuandoMetodoNaoForPermitido()
+            throws Exception {
+
+        mockMvc.perform(
+                        post("/api/v1/ceps/15050305")
+                )
+                .andExpect(status().isMethodNotAllowed())
+                .andExpect(jsonPath("$.status").value(405))
+                .andExpect(jsonPath("$.code")
+                        .value("METODO_NAO_PERMITIDO"))
+                .andExpect(jsonPath("$.path")
+                        .value("/api/v1/ceps/15050305"));
     }
 }

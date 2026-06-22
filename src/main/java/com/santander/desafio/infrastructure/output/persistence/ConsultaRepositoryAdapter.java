@@ -1,13 +1,16 @@
 package com.santander.desafio.infrastructure.output.persistence;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.santander.desafio.application.model.PaginaResultado;
 import com.santander.desafio.application.port.output.ConsultaRepository;
 import com.santander.desafio.domain.model.ConsultaCep;
 import com.santander.desafio.domain.model.Endereco;
-
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 @Repository
 public class ConsultaRepositoryAdapter implements ConsultaRepository {
@@ -116,5 +119,37 @@ public class ConsultaRepositoryAdapter implements ConsultaRepository {
                     exception
             );
         }
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public PaginaResultado<ConsultaCep> buscarHistorico(
+            int pagina,
+            int tamanho
+    ) {
+        PageRequest pageRequest = PageRequest.of(
+                pagina,
+                tamanho,
+                Sort.by(
+                        Sort.Direction.DESC,
+                        "consultadoEm"
+                )
+        );
+
+        Page<ConsultaJpaEntity> resultado =
+                consultaJpaRepository.findAll(pageRequest);
+
+        return new PaginaResultado<>(
+                resultado.getContent()
+                        .stream()
+                        .map(this::toDomain)
+                        .toList(),
+                resultado.getNumber(),
+                resultado.getSize(),
+                resultado.getTotalElements(),
+                resultado.getTotalPages(),
+                resultado.isFirst(),
+                resultado.isLast()
+        );
     }
 }

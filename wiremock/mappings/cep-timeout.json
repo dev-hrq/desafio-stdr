@@ -1,0 +1,25 @@
+{
+  "request": {
+    "method": "GET",
+    "urlPath": "/v1/88888888"
+  },
+  "response": {
+    "status": 200,
+    "fixedDelayMilliseconds": 5000,
+    "headers": {
+      "Content-Type": "application/json; charset=UTF-8"
+    },
+    "jsonBody": {
+      "cep": "88888-888",
+      "logradouro": "Rua de Teste",
+      "complemento": "",
+      "unidade": "",
+      "bairro": "Bairro Teste",
+      "localidade": "Cidade Teste",
+      "uf": "SP",
+      "estado": "São Paulo",
+      "regiao": "Sudeste",
+      "ibge": "0000000"
+    }
+  }
+}
