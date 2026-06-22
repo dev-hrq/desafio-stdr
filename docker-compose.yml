@@ -1,0 +1,42 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: cep-postgres
+    environment:
+      POSTGRES_DB: cepdb
+      POSTGRES_USER: cepuser
+      POSTGRES_PASSWORD: ceppassword
+    ports:
+      - "5432:5432"
+    volumes:
+      - cep_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cepuser -d cepdb"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  wiremock:
+    image: wiremock/wiremock:3.9.1
+    ports:
+      - "8081:8080"
+    volumes:
+      - ./wiremock:/home/wiremock
+
+  app:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/cepdb
+      DB_USERNAME: cepuser
+      DB_PASSWORD: ceppassword
+      OPENCEP_BASE_URL: http://wiremock:8080
+    depends_on:
+      postgres:
+        condition: service_healthy
+      wiremock:
+        condition: service_started
+
+volumes:
+  cep_postgres_data:
